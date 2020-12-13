@@ -1,0 +1,109 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: #<<description of this pipeline stack>>
+
+Resources:
+  CodePipeline: 
+    Type: AWS::CodePipeline::Pipeline
+    DependsOn: CodePipelineServiceRole 
+    Properties:
+      Name: #<<name of the pipeline>>
+      RoleArn:
+        Fn::GetAtt: CodePipelineServiceRole.Arn
+      ArtifactStore:
+        Type: S3                                                
+        Location:
+          Fn::ImportValue: #<<s3 stack name>>::<<s3 bucket name>> 
+      Stages:                                                               
+        - Name: Source-Stage                                              
+          Actions:
+            - Name: source                                         
+              ActionTypeId:
+                Category: Source                                    
+                Owner: AWS
+                Provider: S3                                                
+                Version: 1
+              RunOrder: 1
+              Configuration:
+                PollForSourceChanges: false                                   
+                S3Bucket:                                                       
+                  Fn::ImportValue: #<<s3 stack name>>::<<s3 bucket name>> 
+                S3ObjectKey: #<<s3 object name. zip file>>  
+              OutputArtifacts:
+               - Name: SourceArtifact
+        - Name: build-stage           					
+          Actions:
+            - Name: build                                                  
+              ActionTypeId:
+                Category: Build                                           
+                Owner: AWS
+                Provider: CodeBuild 
+                Version: 1
+              RunOrder: 1                                                 
+              Configuration:
+                PrimarySource: SourceArtifact
+                ProjectName:
+                  Fn::ImportValue: #<<codebuild stack name>>::<<codebuild project name>>               
+              InputArtifacts:           
+                - Name: SourceArtifact
+              OutputArtifacts:
+                - Name: BuildOutput
+      Tags:                                                                    
+        - Key: #key if present
+          Value: #value of the respective key
+
+  CodePipelineServiceRole:                                                     
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: #<<aws service role name>>
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codepipeline.amazonaws.com                             
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: #<<aws policy name>>   
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Resource:
+                  - Fn::ImportValue: #<<stack for codebuild>>::<<codebuild project arn>>
+                Effect: Allow
+                Action:
+                  - iam:PassRole                                         
+              - Resource:
+                  - Fn::ImportValue: #<<stack for codebuild>>::<<codebuild project arn>>
+                Effect: Allow
+                Action:                                              
+                  - codebuild:StartBuild
+                  - codebuild:BatchGetBuilds
+              - Resource:
+                  - Fn::ImportValue: #<<stack for s3 bucket>>::<<s3 bucket name>>  
+                  - Fn::Join:                                                  
+                      - ""
+                      - - Fn::ImportValue: #<<stack for s3 bucket>>::<<s3 bucket arn>> 
+                        - "/*"
+                Effect: Allow
+                Action:                                                                            
+                  - s3:PutObject
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetBucketVersioning
+      Tags:                                                         
+        - Key: user
+          Value: ashvini
+
+Outputs:
+  CodePipeline:                                                   
+    Description: #Reference of the pipeline.
+    Export:
+      Name: !Sub ${AWS::StackName}::CodePipeline
+    Value: !Ref CodePipeline
+
+  CodePipelineServiceRoleArn:                                       
+    Description: #Reference of CodePipeline Service Role ARN
+    Export:
+      Name: !Sub ${AWS::StackName}::CodePipelineServiceRoleArn
+    Value:
+      Fn::GetAtt: CodePipelineServiceRole.Arn

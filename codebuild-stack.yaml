@@ -1,0 +1,110 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: #<<description for codebuild stack>>
+
+Resources:
+  CodeBuildProject:
+    Type: AWS::CodeBuild::Project
+    DependsOn: CodeBuildServiceRole
+    Properties:
+      Name: #<<Name of the codebuild project>>
+      Artifacts:
+        Type: CODEPIPELINE
+        EncryptionDisabled: false
+      Source:
+        Type: CODEPIPELINE
+        BuildSpec: #<<Buildspec reference>>
+        InsecureSsl: false
+      Environment:
+        ComputeType: BUILD_GENERAL1_SMALL
+        Type: LINUX_CONTAINER
+        Image: aws/codebuild/standard:3.0
+        ImagePullCredentialsType: CODEBUILD
+        EnvironmentVariables:
+          - Name: S3Bucket #<<Not compulsory>>
+            Value: #<<S3 Bucket name>>
+      LogsConfig:
+        CloudWatchLogs:
+          GroupName: !Ref PipelineLogGroup 
+          Status: ENABLED 
+          StreamName: !Ref PipelineLogStream 
+      ServiceRole:
+        Fn::GetAtt: CodeBuildServiceRole.Arn 
+      Tags:                             
+        - Key: #<<Key tag>>
+          Value: #<<respective value>>
+
+  PipelineLogGroup: 
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: #<<log group name>>
+
+  PipelineLogStream:                       
+    Type: AWS::Logs::LogStream
+    DependsOn: PipelineLogGroup
+    Properties:
+      LogGroupName: !Ref PipelineLogGroup
+      LogStreamName: codebuild
+
+  CodeBuildServiceRole: 
+    Type: AWS::IAM::Role
+    DependsOn:                            
+      - PipelineLogGroup
+      - PipelineLogStream
+    Properties:
+      RoleName: #<<service role name>>
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: codebuild.amazonaws.com  
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: #<<service role policy name>>
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Resource:
+                  Fn::GetAtt: PipelineLogGroup.Arn  
+                Effect: Allow
+                Action: 
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+              - Resource:
+                  - Fn::ImportValue: #<<s3 stack name here>>::<<S3 Bucket name>>
+                  - Fn::Join:
+                      - ""
+                      - - Fn::ImportValue: #<<s3 stack name here>>::<<s3 bucket arn>>
+                        - "/*"
+                Effect: Allow
+                Action: 
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:GetObjectVersion
+                  - s3:ListBucket
+      Tags: 
+        - Key: #<<Key tag>>
+          Value: #<<respective value>>
+
+
+Outputs:
+  CodeBuildProject:
+    Description: #<<Reference of CodeBuild project>>
+    Export:
+      Name: !Sub ${AWS::StackName}::CodeBuildProject
+    Value: !Sub ${CodeBuildProject}
+
+  CodeBuildProjectArn:
+    Description: #<<Reference of CodeBuild project ARN>>
+    Export:
+      Name: !Sub ${AWS::StackName}::CodeBuildProjectArn
+    Value:
+      Fn::GetAtt: CodeBuildProject.Arn
+
+  CodeBuildServiceRoleArn:
+    Description: #<<Reference of Created Service Role>>
+    Export:
+      Name: !Sub ${AWS::StackName}::CodeBuildServiceRoleArn
+    Value:
+      Fn::GetAtt: CodeBuildServiceRole.Arn

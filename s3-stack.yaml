@@ -1,0 +1,28 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: #<<Give description for this stack>>
+
+Resources:
+  CodePipelineArtifactStore:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain 
+    Properties:
+      BucketName: #<<Name of the bucket here>>
+      VersioningConfiguration:
+        Status: Enabled 
+      Tags:                                             
+        - Key: #<<Tag key>>
+          Value: #<<Value for the respective key>>
+
+Outputs:
+  CodePipelineArtifactStore:  
+    Description: #<<Reference for the s3 bucket created>>
+    Export:
+      Name: !Sub ${AWS::StackName}::CodePipelineArtifactStore
+    Value: !Sub ${CodePipelineArtifactStore}
+
+  CodePipelineArtifactStoreArn:                          
+    Description: #<<Ref of created S3 bucket's ARN>>
+    Export:
+      Name: !Sub ${AWS::StackName}::CodePipelineArtifactStoreArn
+    Value:
+      Fn::GetAtt: CodePipelineArtifactStore.Arn
