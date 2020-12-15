@@ -18,7 +18,7 @@ Outputs:
     Description: #<<Reference for the s3 bucket created>>
     Export:
       Name: !Sub ${AWS::StackName}::MyBucket
-    Value: !Sub ${CodePipelineArtifactStore}
+    Value: !Sub ${MyBucket}
 
   MyBucketArn:                          
     Description: #<<Ref of created S3 bucket's ARN>>
