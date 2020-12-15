@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: 2010-09-09
 Description: #<<Give description for this stack>>
 
 Resources:
-  CodePipelineArtifactStore:
+  MyBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain 
     Properties:
@@ -14,15 +14,15 @@ Resources:
           Value: #<<Value for the respective key>>
 
 Outputs:
-  CodePipelineArtifactStore:  
+  MyBucket:  
     Description: #<<Reference for the s3 bucket created>>
     Export:
-      Name: !Sub ${AWS::StackName}::CodePipelineArtifactStore
+      Name: !Sub ${AWS::StackName}::MyBucket
     Value: !Sub ${CodePipelineArtifactStore}
 
-  CodePipelineArtifactStoreArn:                          
+  MyBucketArn:                          
     Description: #<<Ref of created S3 bucket's ARN>>
     Export:
-      Name: !Sub ${AWS::StackName}::CodePipelineArtifactStoreArn
+      Name: !Sub ${AWS::StackName}::MyBucketArn
     Value:
-      Fn::GetAtt: CodePipelineArtifactStore.Arn
+      Fn::GetAtt: MyBucket.Arn
